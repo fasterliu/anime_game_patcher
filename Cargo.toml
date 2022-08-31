@@ -1,0 +1,14 @@
+[package]
+name = "anime_game_patcher"
+version = "0.1.0"
+edition = "2021"
+description = "A patcher for anime game running with Grasscutter"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[build-dependencies]
+cc = "1.0"
+copy_to_output = "2.0.0"
+
+[dependencies]
+regex = "1.6"
