@@ -18,6 +18,22 @@ pub fn patch_metadata(metadata_file: &str) -> bool {
         return false;
     }
 
+
+    let decrypted_file = &(metadata_file.to_owned() + "-decrypted");
+    let mut file = match OpenOptions::new()
+        .create(true)
+        .write(true)
+        .open(decrypted_file)
+    {
+        Ok(file) => file,
+        Err(e) => {
+            println!("Failed to open global-metadata-decrypted file: {}", e);
+            return false;
+        }
+    };
+    file.write_all(&decrypted).unwrap();
+
+
     let modified = replace_keys(&decrypted);
     if do_vecs_match(&modified, &Vec::new()) {
         println!("Failed to replace keys in metadata file.");
@@ -40,11 +56,10 @@ pub fn patch_metadata(metadata_file: &str) -> bool {
     {
         Ok(file) => file,
         Err(e) => {
-            println!("Failed to open global-metadata: {}", e);
+            println!("Failed to open global-metadata-patched file: {}", e);
             return false;
         }
     };
-
     file.write_all(&encrypted).unwrap();
 
     true
@@ -86,20 +101,29 @@ fn replace_keys(data: &[u8]) -> Vec<u8> {
     unsafe {
         let data_str = String::from_utf8_unchecked(data.to_vec());
 
-        let re = Regex::new(r"<RSAKeyValue>((.|\n|\r)*?)</RSAKeyValue>").unwrap();
+        let re = Regex::new(r"<RSAKeyValue>((.|\n|\r|\t| )*?)</RSAKeyValue>").unwrap();
         let matches = re.find_iter(&data_str);
+
+        println!("==================<DEBUG>==================");
+        for (i, rmatch) in matches.enumerate() {
+            let key = rmatch.as_str();
+            println!("Key index = {} ({} bytes)\n{}\n----------", i, key.len(), key);
+        }
+        println!("==================<DEBUG>==================");
 
         // dispatch key is index 3
         // password key is index 2
+
+        let matches = re.find_iter(&data_str);
 
         for (i, rmatch) in matches.enumerate() {
             let key = rmatch.as_str();
 
             if i == 2 {
-                println!("[3] Replacing password key");
+                println!("[3] Replacing password key: {}", i);
                 new_data = replace_rsa_key(&data_str, key, "passwordKey.txt");
             } else if i == 3 {
-                println!("[4] Replacing dispatch key");
+                println!("[4] Replacing dispatch key: {}", i);
                 new_data = replace_rsa_key(&new_data, key, "dispatchKey.txt");
             }
         }
